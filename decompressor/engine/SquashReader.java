@@ -23,8 +23,7 @@ public class SquashReader {
     DataInputStream dInp = new DataInputStream(fis);
     System.out.println("Decompressing..");
     File file = new File(targetFolder);
-    if (file.exists()) file.delete();
-    file.mkdir();
+    if (!file.exists()) file.mkdirs();
 
     if (!new String(dInp.readNBytes(dInp.readInt())).equals("squash")) {
       fis.close();
@@ -54,7 +53,7 @@ public class SquashReader {
     }
 
     try {
-      while (true) {
+      while (dInp.available() > 0) {
         String filename = new String(
           dInp.readNBytes(dInp.readInt()),
           StandardCharsets.UTF_8
@@ -83,7 +82,7 @@ public class SquashReader {
             String ref = key.toString();
             if (mappings.containsKey(ref)) {
               byte original = mappings.get(ref);
-              fos.write((char) (original & 0xff));
+              fos.write((original & 0xff));
               key.setLength(0);
               written++;
               if (written >= originalBufferLen) break;

@@ -7,38 +7,20 @@ import java.util.PriorityQueue;
 public class TreeBuilder {
 
   private TreeNodeTuple root = null;
-  private Map<?, ?> embeddings;
-  private PriorityQueue<TreeNodeTuple> transientQueue;
 
   public TreeBuilder(PriorityQueue<TreeNodeTuple> queue) {
-    this.transientQueue = new PriorityQueue<>(queue);
     while (queue.size() > 1) {
       TreeNodeTuple t1 = queue.poll();
       TreeNodeTuple t2 = queue.poll();
-      int cumulativeFreq = t1.Frequency + t2.Frequency;
-      TreeNodeTuple pool = new TreeNodeTuple((byte) 0, cumulativeFreq);
-      pool.leftTuple = t1;
-      pool.rightTuple = t2;
-      queue.offer(pool);
+      TreeNodeTuple sub_root = new TreeNodeTuple(
+        (byte) 0,
+        (t1.Frequency + t2.Frequency)
+      );
+      sub_root.leftTuple = t1;
+      sub_root.rightTuple = t2;
+      queue.offer(sub_root);
     }
     this.root = queue.poll();
-  }
-
-  public void scanTree(
-    TreeNodeTuple root,
-    byte value,
-    StringBuilder embedding
-  ) {
-    if (root == null) return;
-    if (value == root.Byte) return;
-    // search left
-    embedding.append('0');
-    scanTree(root.leftTuple, value, embedding);
-
-    // search right
-    embedding.append('1');
-    scanTree(root.rightTuple, value, embedding);
-    embedding.deleteCharAt(embedding.length() - 1);
   }
 
   private void buildCodeMap(
@@ -48,7 +30,7 @@ public class TreeBuilder {
   ) {
     if (node == null) return;
     if (node.isLeaf()) {
-      map.put(node.Byte, code);
+      map.put(node.Byte, code.length() > 0 ? code : "0");
       return;
     }
     buildCodeMap(node.leftTuple, code + "0", map);

@@ -90,7 +90,8 @@ public class Squash {
       try {
         String[] folderTokens = args[1].split("[.]");
         new SquashReader(sqFile).readAndWriteFile(
-          "unsquashed_" + folderTokens[folderTokens.length - 3]
+          "unsquashed_" +
+          (folderTokens[folderTokens.length - 3]).replaceAll("/", "")
         );
       } catch (Exception e) {
         System.out.println(e.getLocalizedMessage());

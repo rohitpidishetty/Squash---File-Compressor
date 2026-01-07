@@ -9,7 +9,9 @@ public class List {
   ArrayList<File> files = new ArrayList<>();
 
   private void depthFirstSearch(File file, String base_dir) {
-    for (File pointer : file.listFiles()) {
+    File[] children = file.listFiles();
+    if (children == null) return;
+    for (File pointer : children) {
       if (pointer.isFile()) {
         System.out.printf(
           "Found file %s staged to be squashed\n",
