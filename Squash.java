@@ -50,7 +50,11 @@ public class Squash {
         targetFile.createNewFile();
         SquashFileWriter sqfw = new SquashFileWriter(targetFile, TARGET_FILE);
         sqfw.commit_header();
-        ArrayList<File> files = new List(file, args[1]).getFiles();
+        String base_dir;
+        ArrayList<File> files = new List(
+          file,
+          base_dir = args[1] + "\\"
+        ).getFiles();
 
         Map<Byte, String> embeddings = new TreeBuilder(
           new QueueBuilder(files).getQueue()
@@ -63,10 +67,9 @@ public class Squash {
           dos.writeByte(em.getKey());
           dos.writeUTF(em.getValue());
         }
-        String base_dir;
         new FileReader(
           files,
-          base_dir = args[1],
+          base_dir = args[1] + "\\",
           dos,
           embeddings
         ).mapEmbeddingsAndWriteToSquash();
@@ -91,7 +94,7 @@ public class Squash {
         String[] folderTokens = args[1].split("[.]");
         new SquashReader(sqFile).readAndWriteFile(
           "unsquashed_" +
-          (folderTokens[folderTokens.length - 3]).replaceAll("/", "")
+            (folderTokens[folderTokens.length - 3]).replaceAll("/", "")
         );
       } catch (Exception e) {
         System.out.println(e.getLocalizedMessage());
