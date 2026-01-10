@@ -18,16 +18,21 @@ echo.
 
 if "%1"=="" goto :usage
 
+
+
+
 if "%1"=="-compress" (
-  if "%2"=="" goto :usage
+  if "%2"=="" goto :usage   
   if "%3"=="" goto :usage
-  java Squash -compress %2 %3
+  java --class-path "C:\Program Files\Squash" Squash -compress %2 %3
+  @REM java Squash -compress %cwd%\%2 %cwd%\%3
   exit /b
 )
 
 if "%1"=="-decompress" (
   if "%2"=="" goto :usage
-  java Squash -decompress %2
+  java --class-path "C:\Program Files\Squash" Squash -decompress %2
+  @REM java Squash -decompress %cwd%%2
   exit /b
 )
 

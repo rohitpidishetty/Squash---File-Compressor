@@ -93,8 +93,10 @@ public class SquashReader {
         fos.close();
         System.out.printf("Successful\n");
       }
+      System.out.printf("De-squashed all the files\n");
     } catch (Exception e) {
-      System.out.println("De-squashed all the files");
+      System.err.printf("Squash error - %s\n", e.getMessage().toString());
+      System.exit(1);
     }
 
     fis.close();

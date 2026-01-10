@@ -88,7 +88,8 @@ public class Squash {
       }
       File sqFile = new File(args[1]);
       if (!sqFile.exists()) {
-        throw new Error("Squash file " + args[1] + " does not exist");
+        System.err.printf("Squash file %s does not exist", args[1]);
+        System.exit(1);
       }
       try {
         String[] folderTokens = args[1].split("[.]");
@@ -98,6 +99,7 @@ public class Squash {
         );
       } catch (Exception e) {
         System.out.println(e.getLocalizedMessage());
+        System.exit(1);
       }
     }
   }
