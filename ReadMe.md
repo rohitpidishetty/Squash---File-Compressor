@@ -20,20 +20,16 @@ Add the Squash.bash path to env variables
 Open a terminal and use the following commands to compress and decompress files.
 
 ## Compress a file or folder
-
-# ./squash -compress origin_file target_file_name
+./squash -compress origin_file target_file_name
 
 Example:
-
-# ./squash -compress "E:\\Folder\\Folder" ./arc.tar.sq
+./squash -compress "E:\\Folder\\Folder" ./arc.tar.sq
 
 ## Decompress a squash archive
-
-# ./squash -decompress target_file_name.tar.sq
+./squash -decompress target_file_name.tar.sq
 
 Example:
-
-# ./squash -decompress ./arc.tar.sq
+./squash -decompress ./arc.tar.sq
 
 ---
 
