@@ -1,4 +1,3 @@
-NFRAC License
 © 2026 NFRAC. All rights reserved.
 This software is licensed under the NFRAC License. 
 You may use, copy, modify, or distribute this software for personal or educational purposes only.
