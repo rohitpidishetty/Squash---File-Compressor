@@ -8,6 +8,15 @@ Commercial use is prohibited without prior written permission from NFRAC.
 
 # Thank you for downloading the software.
 
+Download this file and save it in the folder: C\Program Files\Squash
+
+Structure as,
+C:\Program Files\Squash\Squash.class
+C:\Program Files\Squash\*
+
+
+Add the Squash.bash path to env variables
+
 Open a terminal and use the following commands to compress and decompress files.
 
 ## Compress a file or folder
