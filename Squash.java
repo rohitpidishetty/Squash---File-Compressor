@@ -1,6 +1,8 @@
 import compressor.engine.FileSquasher;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,6 +12,8 @@ import java.util.regex.Pattern;
 public class Squash {
 
   private static String FILENAME_REGEX = "^[A-Za-z0-9 _()-]+$";
+  private static String PWD = ".";
+  private static String CLEAN = ".class";
 
   public static void main(String[] args) {
     if (args.length == 0) showSquashUsage();
@@ -33,10 +37,21 @@ public class Squash {
         }
 
         if (!squashOutputPath.exists()) squashOutputPath.mkdirs();
+        try (
+          FileOutputStream fos = new FileOutputStream(
+            new File(squashOutputPath, squashFileName.concat(".sq"))
+          );
+          DataOutputStream dos = new DataOutputStream(fos);
+        ) {
+          if (targetFilePath.isFile()) {
+            System.out.println("[INFO] Squashing File..");
+            FileSquasher.compress(targetFilePath, false, enums.Files.FILE, dos);
+          } else {
+            System.out.println("[INFO] Squashing Files..");
+          }
+        } catch (Exception e) {}
 
-        if (targetFilePath.isFile()) {
-          FileSquasher.read(targetFilePath, true);
-        }
+        System.out.println("[INFO] Squashing completed.");
 
         break;
       case "-desquash":
@@ -44,7 +59,7 @@ public class Squash {
 
         break;
       case "-clean":
-        cleanClassFiles(new File("."));
+        cleanClassFiles(new File(PWD));
         break;
       default:
         showSquashUsage();
@@ -73,7 +88,7 @@ public class Squash {
 
   public static void cleanClassFiles(File file) {
     if (file.isFile()) {
-      if (file.getName().endsWith(".class")) {
+      if (file.getName().endsWith(CLEAN)) {
         try {
           Files.delete(Paths.get(file.getAbsolutePath()));
         } catch (Exception e) {
@@ -84,6 +99,6 @@ public class Squash {
       }
       return;
     }
-    for (File f : file.listFiles()) cleanClassFiles(f);
+    for (File subFile : file.listFiles()) cleanClassFiles(subFile);
   }
 }

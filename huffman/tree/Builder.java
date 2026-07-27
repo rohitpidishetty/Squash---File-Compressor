@@ -21,6 +21,10 @@ public class Builder {
     this.root = queue.poll();
   }
 
+  public Buffer getRoot() {
+    return this.root;
+  }
+
   private void buildCodeMap(
     Buffer node,
     String code,

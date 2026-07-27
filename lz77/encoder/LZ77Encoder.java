@@ -1,8 +1,11 @@
 package lz77.encoder;
 
+import RLE.encoder.RLE;
 import huffman.buffer.Buffer;
 import huffman.encoder.HuffmanEncoder;
 import huffman.tree.Builder;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,6 +16,7 @@ public class LZ77Encoder {
 
   private static final int WINDOW_SIZE = 32768;
   private static final int LOOKAHEAD_SIZE = 258;
+  private static final byte THRESHOLD = 8;
 
   private class Triplet {
 
@@ -37,7 +41,11 @@ public class LZ77Encoder {
     // EOS: End Of Stream
   }
 
-  public static void encodeStream(byte[] buffer, boolean debug) {
+  public static void encodeStream(
+    byte[] buffer,
+    boolean debug,
+    DataOutputStream dos
+  ) throws Exception {
     List<Triplet> triplets = new ArrayList<>();
     int n = buffer.length;
     int pointer = 0;
@@ -60,7 +68,6 @@ public class LZ77Encoder {
         if (length > bestLength) {
           bestLength = length;
 
-          if (bestLength == lookAheadBufferLimit) break;
           bestDistance = distance;
         }
 
@@ -93,28 +100,122 @@ public class LZ77Encoder {
     PriorityQueue<Buffer> lengthTree = huffEnc.getLengthTree();
     PriorityQueue<Buffer> codeTree = huffEnc.getCodeTree();
 
-    // while (offsetTree.isEmpty() == false) {
-    //   System.out.println(
-    //     offsetTree.peek().Key + " " + offsetTree.peek().Frequency
-    //   );
-    //   offsetTree.poll();
-    // }
+    Builder offsetTreeRef = new Builder(offsetTree);
+    Buffer offsetTreeRoot = offsetTreeRef.getRoot();
+    toByteSequence(
+      offsetTreeRoot,
+      offsetTreeRef.generateEmbeddings(),
+      len,
+      triplets,
+      enums.Triplet.OFFSET,
+      dos
+    );
 
-    Map<Integer, String> offsetEmbedding = new Builder(
-      offsetTree
-    ).generateEmbeddings();
-    new Builder(lengthTree).generateEmbeddings();
-    new Builder(codeTree).generateEmbeddings();
+    Builder lengthTreeRef = new Builder(lengthTree);
+    Buffer lengthTreeRoot = lengthTreeRef.getRoot();
+    toByteSequence(
+      lengthTreeRoot,
+      lengthTreeRef.generateEmbeddings(),
+      len,
+      triplets,
+      enums.Triplet.LENGTH,
+      dos
+    );
 
-    i = 0;
+    Builder codeTreeRef = new Builder(codeTree);
+    Buffer codeTreeRoot = codeTreeRef.getRoot();
+    toByteSequence(
+      codeTreeRoot,
+      codeTreeRef.generateEmbeddings(),
+      len,
+      triplets,
+      enums.Triplet.CODE,
+      dos
+    );
+
+    // System.out.println(Arrays.toString(triplets.get(i).toString().getBytes())); // writeBytes()
+
+    // Flush memory
+    offsetTree.clear();
+    lengthTree.clear();
+    codeTree.clear();
+    offsetTreeRef = null;
+    lengthTreeRef = null;
+    codeTreeRef = null;
+  }
+
+  private static void serializeTree(Buffer tree, DataOutputStream dos)
+    throws Exception {
+    if (tree.leftTuple == null && tree.rightTuple == null) {
+      // System.out.println(1); // writeBit()
+      dos.write(1);
+      // System.out.println(tree.Key); // writeInt()
+      // dos.writeInt(tree.Key);
+      return;
+    }
+    // System.out.println(0); // writeBit()
+    dos.write(0);
+    serializeTree(tree.leftTuple, dos);
+    serializeTree(tree.rightTuple, dos);
+  }
+
+  private static void toByteSequence(
+    Buffer tree,
+    Map<Integer, String> embeddings,
+    int len,
+    List<Triplet> triplets,
+    enums.Triplet type,
+    DataOutputStream dos
+  ) throws Exception {
+    // Size of leaf nodes
+    // System.out.println(embeddings.keySet().size()); // writeInt()
+    dos.writeInt(embeddings.keySet().size());
+    serializeTree(tree, dos);
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+
+    int i = 0;
+    byte b = (byte) 0;
+    int bitsMagnitude = 0;
+
     for (; i < len - 1; i++) {
-      System.out.println(
-        triplets.get(i).offset +
-          " " +
-          offsetEmbedding.get(triplets.get(i).offset)
-      );
+      String em = null;
+
+      switch (type) {
+        case enums.Triplet.OFFSET:
+          em = embeddings.get(triplets.get(i).offset);
+          break;
+        case enums.Triplet.LENGTH:
+          em = embeddings.get(triplets.get(i).length);
+          break;
+        case enums.Triplet.CODE:
+          em = embeddings.get((int) triplets.get(i).nextCode);
+          break;
+        default:
+          break;
+      }
+
+      int em_mag = em.length();
+      for (int j = 0; j < em_mag; j++) {
+        b = (byte) ((byte) (b << 1) | ((byte) (em.charAt(j) == '0' ? 0 : 1)));
+        bitsMagnitude++;
+        if (bitsMagnitude == 8) {
+          byteStream.write(b);
+          bitsMagnitude = 0; // Reset
+          b = (byte) 0;
+        }
+      }
     }
 
-    System.out.println(triplets.get(i));
+    int padding = THRESHOLD - bitsMagnitude;
+    if (bitsMagnitude > 0) {
+      b <<= padding;
+      byteStream.write(b);
+    }
+    // System.out.println(Arrays.toString(byteStream.toByteArray())); // writeByteArray()
+    // dos.write(byteStream.toByteArray());
+
+    // System.out.println(padding); // writeByte()
+    dos.write(padding);
+    // System.out.println("+------------------+");
   }
 }
