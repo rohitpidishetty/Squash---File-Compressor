@@ -18,7 +18,7 @@ public class LZ77Encoder {
   private static final int LOOKAHEAD_SIZE = 258;
   private static final byte THRESHOLD = 8;
 
-  private class Triplet {
+  private static class Triplet {
 
     int offset, length;
     Byte nextCode;
@@ -67,7 +67,6 @@ public class LZ77Encoder {
         }
         if (length > bestLength) {
           bestLength = length;
-
           bestDistance = distance;
         }
 
@@ -76,11 +75,7 @@ public class LZ77Encoder {
       int nextPosition = pointer + bestLength;
       Byte next = null;
       if (nextPosition < n) next = buffer[nextPosition];
-      Triplet triplet = new LZ77Encoder().new Triplet(
-        bestDistance,
-        bestLength,
-        next
-      );
+      Triplet triplet = new Triplet(bestDistance, bestLength, next);
       triplets.add(triplet);
       if (debug) System.out.println(triplet);
       pointer += bestLength;
@@ -148,13 +143,13 @@ public class LZ77Encoder {
     throws Exception {
     if (tree.leftTuple == null && tree.rightTuple == null) {
       // System.out.println(1); // writeBit()
-      dos.write(1);
+      dos.writeByte(1);
       // System.out.println(tree.Key); // writeInt()
       // dos.writeInt(tree.Key);
       return;
     }
     // System.out.println(0); // writeBit()
-    dos.write(0);
+    dos.writeByte(0);
     serializeTree(tree.leftTuple, dos);
     serializeTree(tree.rightTuple, dos);
   }
@@ -186,9 +181,11 @@ public class LZ77Encoder {
           break;
         case enums.Triplet.LENGTH:
           em = embeddings.get(triplets.get(i).length);
+          System.out.println(em + " > len " + triplets.get(i).length);
           break;
         case enums.Triplet.CODE:
           em = embeddings.get((int) triplets.get(i).nextCode);
+          // System.out.println(em + " code -> " + triplets.get(i).nextCode);
           break;
         default:
           break;
@@ -206,13 +203,18 @@ public class LZ77Encoder {
       }
     }
 
-    int padding = THRESHOLD - bitsMagnitude;
+    int padding = bitsMagnitude == 0 ? 0 : THRESHOLD - bitsMagnitude;
     if (bitsMagnitude > 0) {
       b <<= padding;
       byteStream.write(b);
     }
     // System.out.println(Arrays.toString(byteStream.toByteArray())); // writeByteArray()
-    // dos.write(byteStream.toByteArray());
+    byte[] encodedData = byteStream.toByteArray();
+
+    dos.writeInt(encodedData.length);
+    dos.write(encodedData);
+
+    encodedData = null;
 
     // System.out.println(padding); // writeByte()
     dos.write(padding);

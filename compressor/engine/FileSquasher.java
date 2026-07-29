@@ -33,13 +33,15 @@ public class FileSquasher {
       byte chunk[] = new byte[DATA_CHUNK]; // 64 Kilo-Bytes
 
       // total number of chunks
-      dos.writeInt((int) (targetFilePath.length() / DATA_CHUNK));
+      dos.writeInt((int) Math.ceil(targetFilePath.length() / DATA_CHUNK));
 
       try (FileInputStream fis = new FileInputStream(targetFilePath)) {
         int bytesRead = 0;
-        while ((bytesRead = fis.read(chunk)) != -1) {
-          LZ77Encoder.encodeStream(chunk, debugMode, dos);
-        }
+        while ((bytesRead = fis.read(chunk)) != -1) LZ77Encoder.encodeStream(
+          chunk,
+          debugMode,
+          dos
+        );
         System.out.println("[INFO] " + targetFilePath + " squashed.");
       } catch (Exception e) {
         System.out.println("[ERROR] " + e.getMessage());
