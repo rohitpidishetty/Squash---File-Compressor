@@ -1,223 +1,305 @@
 package lz77.encoder;
 
-import RLE.encoder.RLE;
-import huffman.buffer.Buffer;
-import huffman.encoder.HuffmanEncoder;
-import huffman.tree.Builder;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
 
-public class LZ77Encoder {
+public final class LZ77Encoder {
 
-  private static final int WINDOW_SIZE = 32768;
-  private static final int LOOKAHEAD_SIZE = 258;
-  private static final byte THRESHOLD = 8;
+  private static final int WINDOW_SIZE = 65535;
+  private static final int LOOKAHEAD_SIZE = 512;
+  private static final int MIN_MATCH = 4;
+  private static final int HASH_BITS = 16;
+  private static final int HASH_SIZE = 1 << HASH_BITS;
+  private static final int HASH_MASK = HASH_SIZE - 1;
 
-  private static class Triplet {
+  private static final int MAX_CHAIN_SEARCH = 128;
 
-    int offset, length;
-    Byte nextCode;
+  private static final int MODE_RAW = 0;
+  private static final int MODE_COMPRESSED = 1;
 
-    public Triplet(int offset, int length, Byte nextCode) {
-      this.offset = offset;
-      this.length = length;
-      this.nextCode = nextCode;
-    }
-
-    @Override
-    public String toString() {
-      return String.format(
-        "<%d,%d,%s>",
-        offset,
-        length,
-        nextCode == null ? "EOS" : String.valueOf(nextCode)
-      );
-    }
-    // EOS: End Of Stream
-  }
+  private LZ77Encoder() {}
 
   public static void encodeStream(
-    byte[] buffer,
+    byte[] input,
+    int inputLength,
     boolean debug,
-    DataOutputStream dos
-  ) throws Exception {
-    List<Triplet> triplets = new ArrayList<>();
-    int n = buffer.length;
-    int pointer = 0;
-    while (pointer < n) {
-      int bestDistance = 0;
-      int bestLength = 0;
+    DataOutputStream output
+  ) throws IOException {
+    if (input == null) throw new IllegalArgumentException(
+      "Input cannot be null"
+    );
 
-      int windowStart = Math.max(0, pointer - WINDOW_SIZE);
-      int lookAheadBufferLimit = Math.min(LOOKAHEAD_SIZE, n - pointer);
-      while (windowStart < pointer) {
-        int length = 0;
-        int distance = pointer - windowStart;
-        while (length < lookAheadBufferLimit) {
-          if (
-            buffer[windowStart + (length % distance)] !=
-            buffer[pointer + length]
-          ) break;
-          length++;
+    if (
+      inputLength < 0 || inputLength > input.length
+    ) throw new IllegalArgumentException(
+      "Invalid input length: " + inputLength
+    );
+
+    byte[] compressed = compress(input, inputLength, debug);
+
+    /*
+     * Store raw data whenever compression is not beneficial.
+     *
+     * Chunk structure:
+     *
+     * byte mode
+     * int originalLength
+     * int storedLength
+     * byte[] data
+     */
+    if (compressed.length >= inputLength) {
+      output.writeByte(MODE_RAW);
+      output.writeInt(inputLength);
+      output.writeInt(inputLength);
+      output.write(input, 0, inputLength);
+
+      if (debug) {
+        System.out.printf(
+          "[RAW] original=%d, stored=%d%n",
+          inputLength,
+          inputLength
+        );
+      }
+    } else {
+      output.writeByte(MODE_COMPRESSED);
+      output.writeInt(inputLength);
+      output.writeInt(compressed.length);
+      output.write(compressed);
+
+      if (debug) {
+        double ratio =
+          inputLength == 0 ? 0.0 : (compressed.length * 100.0) / inputLength;
+
+        System.out.printf(
+          "[COMPRESSED] original=%d, stored=%d, ratio=%.2f%%%n",
+          inputLength,
+          compressed.length,
+          ratio
+        );
+      }
+    }
+  }
+
+  private static byte[] compress(byte[] input, int inputLength, boolean debug)
+    throws IOException {
+    ByteArrayOutputStream byteOutput = new ByteArrayOutputStream(inputLength);
+
+    BitOutputStream bitOutput = new BitOutputStream(byteOutput);
+
+    /*
+     * head[hash] stores the newest position with that hash.
+     *
+     * previous[position] links to the previous position having the same
+     * hash value.
+     */
+    int[] head = new int[HASH_SIZE];
+    int[] previous = new int[inputLength];
+
+    Arrays.fill(head, -1);
+    Arrays.fill(previous, -1);
+
+    int position = 0;
+    int literalCount = 0;
+    int matchCount = 0;
+
+    while (position < inputLength) {
+      Match match = findBestMatch(input, inputLength, position, head, previous);
+
+      if (match.length >= MIN_MATCH) {
+        /*
+         * Flag 1 means match.
+         */
+        bitOutput.writeBit(1);
+
+        /*
+         * Distance range:
+         * 1 through 65,535
+         *
+         * Stored directly using 16 bits.
+         */
+        bitOutput.writeBits(match.distance, 16);
+
+        /*
+         * Length range:
+         * MIN_MATCH through LOOKAHEAD_SIZE
+         *
+         * Store length - MIN_MATCH in nine bits.
+         */
+        bitOutput.writeBits(match.length - MIN_MATCH, 9);
+
+        if (debug) {
+          System.out.printf(
+            "<distance=%d,length=%d>%n",
+            match.distance,
+            match.length
+          );
         }
+
+        int matchEnd = Math.min(position + match.length, inputLength);
+
+        for (int index = position; index < matchEnd; index++) {
+          insertPosition(input, inputLength, index, head, previous);
+        }
+
+        position += match.length;
+        matchCount++;
+      } else {
+        /*
+         * Flag 0 means literal.
+         */
+        bitOutput.writeBit(0);
+
+        /*
+         * Convert the signed Java byte to an unsigned 0-255 value.
+         */
+        bitOutput.writeBits(input[position] & 0xFF, 8);
+
+        if (debug) System.out.printf("<literal=%d>%n", input[position] & 0xFF);
+
+        insertPosition(input, inputLength, position, head, previous);
+
+        position++;
+        literalCount++;
+      }
+    }
+
+    bitOutput.finish();
+
+    if (debug) {
+      System.out.printf(
+        "[TOKENS] literals=%d, matches=%d%n",
+        literalCount,
+        matchCount
+      );
+    }
+
+    return byteOutput.toByteArray();
+  }
+
+  private static Match findBestMatch(
+    byte[] input,
+    int inputLength,
+    int position,
+    int[] head,
+    int[] previous
+  ) {
+    if (position + MIN_MATCH > inputLength) {
+      return Match.NONE;
+    }
+
+    int hash = hash(input, position);
+    int candidate = head[hash];
+
+    int bestLength = 0;
+    int bestDistance = 0;
+    int attempts = 0;
+
+    int maximumLength = Math.min(LOOKAHEAD_SIZE, inputLength - position);
+
+    while (candidate >= 0 && attempts < MAX_CHAIN_SEARCH) {
+      int distance = position - candidate;
+
+      if (distance > WINDOW_SIZE) {
+        break;
+      }
+
+      /*
+       * Quick rejection before performing a longer comparison.
+       */
+      if (
+        bestLength < maximumLength &&
+        input[candidate + bestLength] == input[position + bestLength]
+      ) {
+        int length = matchLength(
+          input,
+          inputLength,
+          candidate,
+          position,
+          maximumLength
+        );
+
         if (length > bestLength) {
           bestLength = length;
           bestDistance = distance;
-        }
 
-        windowStart++;
-      }
-      int nextPosition = pointer + bestLength;
-      Byte next = null;
-      if (nextPosition < n) next = buffer[nextPosition];
-      Triplet triplet = new Triplet(bestDistance, bestLength, next);
-      triplets.add(triplet);
-      if (debug) System.out.println(triplet);
-      pointer += bestLength;
-      if (next != null) pointer++;
-    }
-    if (debug) System.out.println("+==============+");
-    int len = triplets.size();
-    int i = 0;
-    HuffmanEncoder huffEnc = new HuffmanEncoder();
-
-    for (; i < len - 1; i++) {
-      huffEnc.calculateFrequency(triplets.get(i).offset, enums.Triplet.OFFSET);
-      huffEnc.calculateFrequency(triplets.get(i).length, enums.Triplet.LENGTH);
-      huffEnc.calculateFrequency(triplets.get(i).nextCode, enums.Triplet.CODE);
-    }
-    PriorityQueue<Buffer> offsetTree = huffEnc.getOffsetTree();
-    PriorityQueue<Buffer> lengthTree = huffEnc.getLengthTree();
-    PriorityQueue<Buffer> codeTree = huffEnc.getCodeTree();
-
-    Builder offsetTreeRef = new Builder(offsetTree);
-    Buffer offsetTreeRoot = offsetTreeRef.getRoot();
-    toByteSequence(
-      offsetTreeRoot,
-      offsetTreeRef.generateEmbeddings(),
-      len,
-      triplets,
-      enums.Triplet.OFFSET,
-      dos
-    );
-
-    Builder lengthTreeRef = new Builder(lengthTree);
-    Buffer lengthTreeRoot = lengthTreeRef.getRoot();
-    toByteSequence(
-      lengthTreeRoot,
-      lengthTreeRef.generateEmbeddings(),
-      len,
-      triplets,
-      enums.Triplet.LENGTH,
-      dos
-    );
-
-    Builder codeTreeRef = new Builder(codeTree);
-    Buffer codeTreeRoot = codeTreeRef.getRoot();
-    toByteSequence(
-      codeTreeRoot,
-      codeTreeRef.generateEmbeddings(),
-      len,
-      triplets,
-      enums.Triplet.CODE,
-      dos
-    );
-
-    // System.out.println(Arrays.toString(triplets.get(i).toString().getBytes())); // writeBytes()
-
-    // Flush memory
-    offsetTree.clear();
-    lengthTree.clear();
-    codeTree.clear();
-    offsetTreeRef = null;
-    lengthTreeRef = null;
-    codeTreeRef = null;
-  }
-
-  private static void serializeTree(Buffer tree, DataOutputStream dos)
-    throws Exception {
-    if (tree.leftTuple == null && tree.rightTuple == null) {
-      // System.out.println(1); // writeBit()
-      dos.writeByte(1);
-      // System.out.println(tree.Key); // writeInt()
-      // dos.writeInt(tree.Key);
-      return;
-    }
-    // System.out.println(0); // writeBit()
-    dos.writeByte(0);
-    serializeTree(tree.leftTuple, dos);
-    serializeTree(tree.rightTuple, dos);
-  }
-
-  private static void toByteSequence(
-    Buffer tree,
-    Map<Integer, String> embeddings,
-    int len,
-    List<Triplet> triplets,
-    enums.Triplet type,
-    DataOutputStream dos
-  ) throws Exception {
-    // Size of leaf nodes
-    // System.out.println(embeddings.keySet().size()); // writeInt()
-    dos.writeInt(embeddings.keySet().size());
-    serializeTree(tree, dos);
-    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-
-    int i = 0;
-    byte b = (byte) 0;
-    int bitsMagnitude = 0;
-
-    for (; i < len - 1; i++) {
-      String em = null;
-
-      switch (type) {
-        case enums.Triplet.OFFSET:
-          em = embeddings.get(triplets.get(i).offset);
-          break;
-        case enums.Triplet.LENGTH:
-          em = embeddings.get(triplets.get(i).length);
-          System.out.println(em + " > len " + triplets.get(i).length);
-          break;
-        case enums.Triplet.CODE:
-          em = embeddings.get((int) triplets.get(i).nextCode);
-          // System.out.println(em + " code -> " + triplets.get(i).nextCode);
-          break;
-        default:
-          break;
-      }
-
-      int em_mag = em.length();
-      for (int j = 0; j < em_mag; j++) {
-        b = (byte) ((byte) (b << 1) | ((byte) (em.charAt(j) == '0' ? 0 : 1)));
-        bitsMagnitude++;
-        if (bitsMagnitude == 8) {
-          byteStream.write(b);
-          bitsMagnitude = 0; // Reset
-          b = (byte) 0;
+          if (bestLength == maximumLength) {
+            break;
+          }
         }
       }
+
+      candidate = previous[candidate];
+      attempts++;
     }
 
-    int padding = bitsMagnitude == 0 ? 0 : THRESHOLD - bitsMagnitude;
-    if (bitsMagnitude > 0) {
-      b <<= padding;
-      byteStream.write(b);
+    if (bestLength < MIN_MATCH) {
+      return Match.NONE;
     }
-    // System.out.println(Arrays.toString(byteStream.toByteArray())); // writeByteArray()
-    byte[] encodedData = byteStream.toByteArray();
 
-    dos.writeInt(encodedData.length);
-    dos.write(encodedData);
+    return new Match(bestDistance, bestLength);
+  }
 
-    encodedData = null;
+  private static int matchLength(
+    byte[] input,
+    int inputLength,
+    int candidate,
+    int position,
+    int maximumLength
+  ) {
+    int length = 0;
+    int distance = position - candidate;
 
-    // System.out.println(padding); // writeByte()
-    dos.write(padding);
-    // System.out.println("+------------------+");
+    while (length < maximumLength) {
+      int sourceIndex = candidate + (length % distance);
+
+      if (
+        sourceIndex >= inputLength ||
+        input[sourceIndex] != input[position + length]
+      ) break;
+
+      length++;
+    }
+
+    return length;
+  }
+
+  private static void insertPosition(
+    byte[] input,
+    int inputLength,
+    int position,
+    int[] head,
+    int[] previous
+  ) {
+    if (position + MIN_MATCH > inputLength) return;
+    int hash = hash(input, position);
+    previous[position] = head[hash];
+    head[hash] = position;
+  }
+
+  private static int hash(byte[] input, int position) {
+    int value =
+      ((input[position] & 0xFF) * 0x1E35A7BD) ^
+      ((input[position + 1] & 0xFF) * 0x9E3779B1) ^
+      ((input[position + 2] & 0xFF) * 0x85EBCA77) ^
+      ((input[position + 3] & 0xFF) * 0xC2B2AE3D);
+
+    value ^= value >>> 16;
+
+    return value & HASH_MASK;
+  }
+
+  private static final class Match {
+
+    private static final Match NONE = new Match(0, 0);
+
+    private final int distance;
+    private final int length;
+
+    private Match(int distance, int length) {
+      this.distance = distance;
+      this.length = length;
+    }
   }
 }
