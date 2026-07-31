@@ -31,19 +31,10 @@ public final class FileSquasher {
 
       dos.writeUTF(targetFile.getAbsolutePath());
 
-      if (fileDescriptor != enums.Files.FILE) {
-        dos.writeLong(0);
-        dos.writeInt(0);
-        return;
-      }
-
       long fileSize = targetFile.length();
 
-      dos.writeLong(fileSize);
-
-      int chunkCount = (int) ((fileSize + DATA_CHUNK - 1L) / DATA_CHUNK);
-
-      dos.writeInt(chunkCount);
+      // Chunks in single file.
+      dos.writeInt((int) ((fileSize + DATA_CHUNK - 1L) / DATA_CHUNK));
 
       byte[] chunk = new byte[DATA_CHUNK];
 
