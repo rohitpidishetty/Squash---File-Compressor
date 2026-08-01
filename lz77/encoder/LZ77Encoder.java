@@ -71,6 +71,7 @@ public final class LZ77Encoder {
       output.writeInt(inputLength);
       output.writeInt(compressed.length);
       output.write(compressed);
+
       if (debug) {
         double ratio =
           inputLength == 0 ? 0.0 : (compressed.length * 100.0) / inputLength;

@@ -63,13 +63,17 @@ public final class FileSquasher {
 
   public static void depthFirstSearchAllFilesAndCompress(
     File targetFile,
-    DataOutputStream dos
+    DataOutputStream dos,
+    boolean debug
   ) {
     if (targetFile.isFile()) {
-      System.out.println(targetFile.getAbsolutePath());
+      FileSquasher.compress(targetFile, debug, dos);
+      System.out.println(
+        "[INFO] " + targetFile.getAbsolutePath() + " (Compressed)"
+      );
       return;
     }
     for (File subFile : targetFile.listFiles())
-      depthFirstSearchAllFilesAndCompress(subFile, dos);
+      depthFirstSearchAllFilesAndCompress(subFile, dos, debug);
   }
 }

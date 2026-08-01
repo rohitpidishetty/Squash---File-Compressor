@@ -58,7 +58,8 @@ public class Squash {
             dos.writeByte(1);
             FileSquasher.depthFirstSearchAllFilesAndCompress(
               targetFilePath,
-              dos
+              dos,
+              false
             );
           }
         } catch (Exception e) {}
