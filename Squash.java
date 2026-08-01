@@ -47,6 +47,7 @@ public class Squash {
             System.out.println("[INFO] Squashing File..");
             FileSquasher.compress(targetFilePath, false, enums.Files.FILE, dos);
           } else {
+            // DFS & -squash every file
             System.out.println("[INFO] Squashing Files..");
           }
         } catch (Exception e) {}
