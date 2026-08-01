@@ -67,10 +67,9 @@ public final class FileSquasher {
     boolean debug
   ) {
     if (targetFile.isFile()) {
+      System.out.printf("[INFO ] Compressing.. : %s%n", targetFile.getName());
       FileSquasher.compress(targetFile, debug, dos);
-      System.out.println(
-        "[INFO] " + targetFile.getAbsolutePath() + " (Compressed)"
-      );
+      System.out.printf("[DONE ] Compressed : %s%n", targetFile.getName());
       return;
     }
     for (File subFile : targetFile.listFiles())
