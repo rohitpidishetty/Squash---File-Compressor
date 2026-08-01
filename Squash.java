@@ -45,10 +45,21 @@ public class Squash {
         ) {
           if (targetFilePath.isFile()) {
             System.out.println("[INFO] Squashing File..");
-            FileSquasher.compress(targetFilePath, false, enums.Files.FILE, dos);
+            /*
+             * File type:
+             * 0 = file
+             * 1 = directory
+             */
+            dos.writeByte(0);
+            FileSquasher.compress(targetFilePath, false, dos);
           } else {
             // DFS & -squash every file
             System.out.println("[INFO] Squashing Files..");
+            dos.writeByte(1);
+            FileSquasher.depthFirstSearchAllFilesAndCompress(
+              targetFilePath,
+              dos
+            );
           }
         } catch (Exception e) {}
 

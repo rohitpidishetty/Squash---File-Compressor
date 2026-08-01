@@ -14,7 +14,6 @@ public final class FileSquasher {
   public static void compress(
     File targetFile,
     boolean debugMode,
-    enums.Files fileDescriptor,
     DataOutputStream dos
   ) {
     if (
@@ -22,13 +21,6 @@ public final class FileSquasher {
     ) throw new IllegalArgumentException("Target does not exist");
 
     try {
-      /*
-       * File type:
-       * 0 = file
-       * 1 = directory
-       */
-      dos.writeByte(fileDescriptor == enums.Files.FILE ? 0 : 1);
-
       dos.writeUTF(targetFile.getAbsolutePath());
 
       long fileSize = targetFile.length();
@@ -67,5 +59,17 @@ public final class FileSquasher {
     }
 
     return totalRead;
+  }
+
+  public static void depthFirstSearchAllFilesAndCompress(
+    File targetFile,
+    DataOutputStream dos
+  ) {
+    if (targetFile.isFile()) {
+      System.out.println(targetFile.getAbsolutePath());
+      return;
+    }
+    for (File subFile : targetFile.listFiles())
+      depthFirstSearchAllFilesAndCompress(subFile, dos);
   }
 }
