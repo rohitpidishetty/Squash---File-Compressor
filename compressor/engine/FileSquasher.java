@@ -5,13 +5,25 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import lz77.encoder.LZ77Encoder;
 
 public final class FileSquasher {
 
   private static final int DATA_CHUNK = 65536;
+  private static final String PRESENT_WORKING_DIR = System.getProperty(
+    "user.dir"
+  );
+  private static String PresentWorkingDir;
+
+  static {
+    PresentWorkingDir = new String(
+      PRESENT_WORKING_DIR.substring(PRESENT_WORKING_DIR.lastIndexOf("\\") + 1)
+    );
+  }
 
   public static void compress(
+    String rootFolder,
     File targetFile,
     boolean debugMode,
     DataOutputStream dos
@@ -19,9 +31,12 @@ public final class FileSquasher {
     if (
       targetFile == null || !targetFile.exists()
     ) throw new IllegalArgumentException("Target does not exist");
-
     try {
-      dos.writeUTF(targetFile.getAbsolutePath());
+      String path = targetFile.getAbsolutePath();
+
+      path = path.substring(path.indexOf(rootFolder));
+
+      dos.writeUTF(path);
 
       long fileSize = targetFile.length();
 
@@ -43,7 +58,8 @@ public final class FileSquasher {
       }
 
       if (debugMode) System.out.println("[INFO] " + targetFile + " squashed.");
-    } catch (IOException exception) {
+    } catch (Exception exception) {
+      System.out.println("[Error] " + exception.getMessage());
       throw new RuntimeException("Could not compress " + targetFile, exception);
     }
   }
@@ -57,22 +73,23 @@ public final class FileSquasher {
       if (count == -1) break;
       totalRead += count;
     }
-
     return totalRead;
   }
 
   public static void depthFirstSearchAllFilesAndCompress(
+    String rootFolder,
     File targetFile,
     DataOutputStream dos,
     boolean debug
   ) {
     if (targetFile.isFile()) {
       System.out.printf("[INFO ] Compressing.. : %s%n", targetFile.getName());
-      FileSquasher.compress(targetFile, debug, dos);
+      FileSquasher.compress(rootFolder, targetFile, debug, dos);
       System.out.printf("[DONE ] Compressed : %s%n", targetFile.getName());
       return;
     }
+    System.out.println(Arrays.toString(targetFile.listFiles()));
     for (File subFile : targetFile.listFiles())
-      depthFirstSearchAllFilesAndCompress(subFile, dos, debug);
+      depthFirstSearchAllFilesAndCompress(rootFolder, subFile, dos, debug);
   }
 }

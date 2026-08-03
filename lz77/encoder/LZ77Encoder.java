@@ -85,6 +85,10 @@ public final class LZ77Encoder {
     }
   }
 
+  // +----------------------------------------+
+  //            Helper Functions
+  // +----------------------------------------+
+
   private static byte[] compress(byte[] input, int inputLength, boolean debug)
     throws IOException {
     List<Token> tokens = createTokens(input, inputLength, debug);

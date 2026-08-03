@@ -1,5 +1,9 @@
 import compressor.engine.FileSquasher;
+import decompressor.engine.FileDeSquasher;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,18 +28,15 @@ public class Squash {
         File targetFilePath = new File(args[1]);
         String squashFileName = args[2];
         File squashOutputPath = new File(args[3]);
-
         if (!targetFilePath.exists()) {
           throwError("[ERROR] Intended file not found.");
         }
-
         if (!Pattern.matches(FILENAME_REGEX, squashFileName)) {
           throwError("[ERROR] Invalid filename.");
         }
         if (squashOutputPath.getName().contains(".")) {
           throwError("[ERROR] Invalid output file path.");
         }
-
         if (!squashOutputPath.exists()) squashOutputPath.mkdirs();
         try (
           FileOutputStream fos = new FileOutputStream(
@@ -51,12 +52,20 @@ public class Squash {
              * 1 = directory
              */
             dos.writeByte(0);
-            FileSquasher.compress(targetFilePath, false, dos);
+            FileSquasher.compress(
+              targetFilePath.getName(),
+              targetFilePath,
+              false,
+              dos
+            );
           } else {
             // DFS & -squash every file
             System.out.println("[INFO] Squashing Files..");
             dos.writeByte(1);
+            // System.out.println(Arrays.toString(targetFilePath.list()));
+            // System.exit(1);
             FileSquasher.depthFirstSearchAllFilesAndCompress(
+              targetFilePath.getName(),
               targetFilePath,
               dos,
               false
@@ -70,6 +79,30 @@ public class Squash {
       case "-desquash":
         if (args.length != 3) showSquashUsage();
 
+        File squashFile = new File(args[1]);
+        File outputPath = new File(args[2]);
+
+        if (!squashFile.exists() || !squashFile.isFile()) {
+          throwError("[ERROR] Squash file not found.");
+        }
+        if (outputPath.getName().contains(".")) {
+          throwError("[ERROR] Invalid output path.");
+        }
+        if (!outputPath.exists()) {
+          outputPath.mkdirs();
+        }
+        System.out.println("[INFO] DeSquashing..");
+        try (
+          FileInputStream fis = new FileInputStream(squashFile);
+          BufferedInputStream bis = new BufferedInputStream(fis);
+          DataInputStream dis = new DataInputStream(bis)
+        ) {
+          FileDeSquasher.decompress(dis, outputPath);
+        } catch (Exception e) {
+          e.printStackTrace();
+          throwError("[ERROR] Could not desquash file.");
+        }
+        System.out.println("[INFO] DeSquashing completed.");
         break;
       case "-clean":
         cleanClassFiles(new File(PWD));
@@ -89,6 +122,7 @@ public class Squash {
 
       Example:
       java Squash -squash "C:\\Users\\rohit\\Pictures\\Screenshots 1\\Screenshot 2025-12-29 000431.png" squashed "C:\\Users\\rohit\\Desktop"
+      java Squash -desquash "C:\\Users\\rohit\\OneDrive\\Desktop\\test\\pic.sq" "C:\\Users\\rohit\\OneDrive\\Desktop\\test\\x"
       """
     );
     System.exit(1);
