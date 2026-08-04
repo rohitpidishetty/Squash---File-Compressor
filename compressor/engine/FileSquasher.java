@@ -88,7 +88,6 @@ public final class FileSquasher {
       System.out.printf("[DONE ] Compressed : %s%n", targetFile.getName());
       return;
     }
-    System.out.println(Arrays.toString(targetFile.listFiles()));
     for (File subFile : targetFile.listFiles())
       depthFirstSearchAllFilesAndCompress(rootFolder, subFile, dos, debug);
   }

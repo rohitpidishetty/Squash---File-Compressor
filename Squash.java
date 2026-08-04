@@ -121,8 +121,8 @@ public class Squash {
       java Squash -desquash <squash-file> <output-path>
 
       Example:
-      java Squash -squash "C:\\Users\\rohit\\Pictures\\Screenshots 1\\Screenshot 2025-12-29 000431.png" squashed "C:\\Users\\rohit\\Desktop"
-      java Squash -desquash "C:\\Users\\rohit\\OneDrive\\Desktop\\test\\pic.sq" "C:\\Users\\rohit\\OneDrive\\Desktop\\test\\x"
+      java Squash -squash "C:\\Users\\<YourName>\\Pictures\\Screenshots 1\\Image.png" squashed "C:\\Users\\<YourName>\\Desktop"
+      java Squash -desquash "C:\\Users\\<YourName>\\OneDrive\\Desktop\\test\\pic.sq" "C:\\Users\\<YourName>\\OneDrive\\Desktop\\test"
       """
     );
     System.exit(1);

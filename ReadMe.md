@@ -5,7 +5,23 @@ A high-performance Java compression library designed for efficient file compress
 Squash focuses on providing a lightweight, extensible, and streaming-oriented architecture capable of compressing large files while maintaining fast execution speeds and minimal memory overhead.
 
 ---
+#### Usage
 
+```bash
+java Squash -squash <file-path | folder> <squash-as-name> <output-path>
+java Squash -desquash <squash-file> <output-path>
+```
+
+#### Example
+
+```bash
+java Squash -squash "C:\\Users\\<YourName>\\Pictures\\Screenshots 1\\Image.png" squashed "C:\\Users\\<YourName>\\Desktop"
+java Squash -desquash "C:\\Users\\<YourName>\\OneDrive\\Desktop\\test\\pic.sq" "C:\\Users\\<YourName>\\OneDrive\\Desktop\\test"
+     
+```
+---
+
+---
 ## Features
 
 - High-speed file compression and extraction
