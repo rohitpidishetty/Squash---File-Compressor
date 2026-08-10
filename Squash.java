@@ -45,8 +45,8 @@ public class Squash {
           DataOutputStream dos = new DataOutputStream(fos);
         ) {
           // ############### (VERSION CONFLICT) ##################
-          dos.writeUTF("SQ-PGM-VER"); // Squash Program Version
-          dos.writeInt(2);
+          dos.writeUTF(versioning.Squash.header); // Squash Program Version
+          dos.writeInt(versioning.Squash.versionId);
           // ############### (VERSION CONFLICT) ##################
           if (targetFilePath.isFile()) {
             System.out.println("[INFO] Squashing File..");

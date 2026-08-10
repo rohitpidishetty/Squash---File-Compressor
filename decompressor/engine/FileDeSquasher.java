@@ -9,12 +9,12 @@ public final class FileDeSquasher {
     throws IOException {
     // ############### (VERSION CONFLICT) ##################
     String header = input.readUTF();
-    if (!header.equals("SQ-PGM-VER")) {
+    if (!header.equals(versioning.Squash.header)) {
       System.out.println("[ERROR] Invalid squash file.");
       System.exit(1);
     }
     int version = input.readInt();
-    if (version != 2) {
+    if (version != versioning.Squash.versionId) {
       System.out.println("[ERROR] Version conflict error.");
       System.exit(1);
     }
