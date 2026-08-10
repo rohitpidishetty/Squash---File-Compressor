@@ -7,6 +7,19 @@ public final class FileDeSquasher {
 
   public static void decompress(DataInputStream input, File outputRoot)
     throws IOException {
+    // ############### (VERSION CONFLICT) ##################
+    String header = input.readUTF();
+    if (!header.equals("SQ-PGM-VER")) {
+      System.out.println("[ERROR] Invalid squash file.");
+      System.exit(1);
+    }
+    int version = input.readInt();
+    if (version != 2) {
+      System.out.println("[ERROR] Version conflict error.");
+      System.exit(1);
+    }
+    // ############### (VERSION CONFLICT) ##################
+
     byte type = input.readByte();
 
     if (type == 0) decompressFile(input, outputRoot);
