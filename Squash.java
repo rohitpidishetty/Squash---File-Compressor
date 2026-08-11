@@ -4,21 +4,18 @@ import enums.SquashFormat;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.regex.Pattern;
 
-public class Squash {
+public final class Squash {
 
-  private static String FILENAME_REGEX = "^[A-Za-z0-9 _()-]+$";
-  private static String PWD = ".";
-  private static String CLEAN = ".class";
+  private static final String FILENAME_REGEX = "^[A-Za-z0-9 _()-]+$";
+  private static final String PWD = ".";
+  private static final String CLEAN = ".class";
 
   public static void main(String[] args) {
     if (args.length == 0) showSquashUsage();
