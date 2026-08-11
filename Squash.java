@@ -56,7 +56,7 @@ public class Squash {
              * 0 = file
              * 1 = directory
              */
-            dos.writeByte(0);
+            dos.writeByte(enums.Files.FILE.getRootType());
             FileSquasher.compress(
               targetFilePath.getName(),
               targetFilePath,
@@ -66,7 +66,7 @@ public class Squash {
           } else {
             // DFS & -squash every file
             System.out.println("[INFO] Squashing Files..");
-            dos.writeByte(1);
+            dos.writeByte(enums.Files.FOLDER.getRootType());
             // System.out.println(Arrays.toString(targetFilePath.list()));
             // System.exit(1);
             FileSquasher.depthFirstSearchAllFilesAndCompress(
@@ -89,6 +89,9 @@ public class Squash {
 
         if (!squashFile.exists() || !squashFile.isFile()) {
           throwError("[ERROR] Squash file not found.");
+        }
+        if (!squashFile.getName().endsWith(".sq")) {
+          throwError("[ERROR] Unexpected file format.");
         }
         if (outputPath.getName().contains(".")) {
           throwError("[ERROR] Invalid output path.");

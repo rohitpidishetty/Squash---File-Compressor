@@ -9,22 +9,35 @@ public final class FileDeSquasher {
   public static void decompress(DataInputStream input, File outputRoot)
     throws IOException {
     // ############### (VERSION CONFLICT) ##################
-    String header = input.readUTF();
-    if (!header.equals(SquashFormat.V2.getHeader())) {
-      System.out.println("[ERROR] Invalid squash file.");
+    try {
+      String header = input.readUTF();
+      if (!header.equals(SquashFormat.V2.getHeader())) {
+        System.out.println("[ERROR] Invalid squash file.");
+        System.exit(1);
+      }
+    } catch (Exception e) {
+      System.out.println("[ERROR] Corrupted file");
       System.exit(1);
     }
-    int version = input.readInt();
-    if (version != SquashFormat.V2.getCurrentVersion()) {
-      System.out.println("[ERROR] Version conflict error.");
+    try {
+      int version = input.readInt();
+      if (version != SquashFormat.V2.getCurrentVersion()) {
+        System.out.println("[ERROR] Version conflict error.");
+        System.exit(1);
+      }
+    } catch (Exception e) {
+      System.out.println("[ERROR] Corrupted file");
       System.exit(1);
     }
     // ############### (VERSION CONFLICT) ##################
 
     byte type = input.readByte();
 
-    if (type == 0) decompressFile(input, outputRoot);
-    else if (type == 1) {
+    if (type == enums.Files.FILE.getRootType()) decompressFile(
+      input,
+      outputRoot
+    );
+    else if (type == enums.Files.FOLDER.getRootType()) {
       while (true) {
         try {
           decompressFile(input, outputRoot);
