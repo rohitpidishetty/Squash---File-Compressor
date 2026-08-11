@@ -1,5 +1,6 @@
 import compressor.engine.FileSquasher;
 import decompressor.engine.FileDeSquasher;
+import enums.SquashFormat;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -45,8 +46,8 @@ public class Squash {
           DataOutputStream dos = new DataOutputStream(fos);
         ) {
           // ############### (VERSION CONFLICT) ##################
-          dos.writeUTF(versioning.Squash.header); // Squash Program Version
-          dos.writeInt(versioning.Squash.versionId);
+          dos.writeUTF(SquashFormat.V2.getHeader());
+          dos.writeInt(SquashFormat.V2.getCurrentVersion());
           // ############### (VERSION CONFLICT) ##################
           if (targetFilePath.isFile()) {
             System.out.println("[INFO] Squashing File..");
