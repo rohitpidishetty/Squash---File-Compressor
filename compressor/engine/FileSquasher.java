@@ -56,7 +56,7 @@ public final class FileSquasher {
         ) LZ77Encoder.encodeStream(chunk, bytesRead, debugMode, dos);
       }
 
-      if (debugMode) System.out.println("[INFO] " + targetFile + " squashed.");
+      if (debugMode) System.out.printf("[INFO] %s squashed.\n", targetFile);
     } catch (Exception exception) {
       System.out.println("[Error] " + exception.getMessage());
       throw new RuntimeException("Could not compress " + targetFile, exception);

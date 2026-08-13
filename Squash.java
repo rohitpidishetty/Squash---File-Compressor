@@ -16,6 +16,7 @@ public final class Squash {
   private static final String FILENAME_REGEX = "^[A-Za-z0-9 _()-]+$";
   private static final String PWD = ".";
   private static final String CLEAN = ".class";
+  private static final String FILE_EXTENSION = ".sq";
 
   public static void main(String[] args) {
     if (args.length == 0) showSquashUsage();
@@ -38,14 +39,14 @@ public final class Squash {
         if (!squashOutputPath.exists()) squashOutputPath.mkdirs();
         try (
           FileOutputStream fos = new FileOutputStream(
-            new File(squashOutputPath, squashFileName.concat(".sq"))
+            new File(squashOutputPath, squashFileName.concat(FILE_EXTENSION))
           );
           DataOutputStream dos = new DataOutputStream(fos);
         ) {
-          // ############### (VERSION CONFLICT) ##################
+          // ############### (VERSIONING) ##################
           dos.writeUTF(SquashFormat.V2.getHeader());
           dos.writeInt(SquashFormat.V2.getCurrentVersion());
-          // ############### (VERSION CONFLICT) ##################
+          // ############### (VERSIONING) ##################
           if (targetFilePath.isFile()) {
             System.out.println("[INFO] Squashing File..");
             /*
@@ -64,8 +65,6 @@ public final class Squash {
             // DFS & -squash every file
             System.out.println("[INFO] Squashing Files..");
             dos.writeByte(enums.Files.FOLDER.getRootType());
-            // System.out.println(Arrays.toString(targetFilePath.list()));
-            // System.exit(1);
             FileSquasher.depthFirstSearchAllFilesAndCompress(
               targetFilePath.getName(),
               targetFilePath,
