@@ -1,5 +1,6 @@
 import compressor.engine.FileSquasher;
 import decompressor.engine.FileDeSquasher;
+import enums.Flags;
 import enums.SquashFormat;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -20,9 +21,10 @@ public final class Squash {
 
   public static void main(String[] args) {
     if (args.length == 0) showSquashUsage();
-
-    switch (args[0]) {
-      case "-squash":
+    Flags flag = Flags.filter(args[0]);
+    if (flag == null) throwError("[ERROR] Invalid flag found.");
+    switch (flag) {
+      case SQUASH:
         if (args.length != 4) showSquashUsage();
         File targetFilePath = new File(args[1]);
         String squashFileName = args[2];
@@ -77,7 +79,7 @@ public final class Squash {
         System.out.println("[INFO] Squashing completed.");
 
         break;
-      case "-desquash":
+      case DESQUASH:
         if (args.length != 3) showSquashUsage();
 
         File squashFile = new File(args[1]);
@@ -108,7 +110,7 @@ public final class Squash {
         }
         System.out.println("[INFO] DeSquashing completed.");
         break;
-      case "-clean":
+      case CLEAN:
         cleanClassFiles(new File(PWD));
         break;
       default:
